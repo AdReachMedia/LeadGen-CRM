@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# LeadGen CRM - Finale Version mit Supabase-Integration (v9.2 - Final Auth Fix)
+# LeadGen CRM - Finale Version mit Supabase-Integration (v9.2 - Final Auth Fix) 1
 # -----------------------------------------------------------------------------
 
 # --- 1. IMPORTS & SETUP ---
