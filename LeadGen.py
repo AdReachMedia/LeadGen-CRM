@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# LeadGen CRM - Finale Version mit Supabase-Integration (v9.0 - Multi-User & Auth)
+# LeadGen CRM - Finale Version mit Supabase-Integration (v9.3 - Final RLS Upsert Fix)
 # -----------------------------------------------------------------------------
 
 # --- 1. IMPORTS & SETUP ---
@@ -250,7 +250,7 @@ else:
             st.session_state.page = page
             st.rerun()
     st.sidebar.markdown("---")
-    st.sidebar.caption("LeadGen CRM v9.0 | Multi-User")
+    st.sidebar.caption("LeadGen CRM v9.3 | Final")
     st.header(st.session_state.page)
     
     def go_to_page(page_name): st.session_state.page = page_name
@@ -350,7 +350,7 @@ else:
                         if b_col3.button("🗑️ Löschen", key=f"delete_task_main_{task['id']}"): delete_task(task['id']); st.rerun()
             if urgent_tasks: display_task_list(urgent_tasks, "🔥 Dringend: Fällig & Überfällig", True)
             if future_tasks: display_task_list(future_tasks, "🗓️ Zukünftige Aufgaben", False)
-            
+
     elif st.session_state.page == "🗄️ Archiv":
         st.info("Hier finden Sie alle Kampagnen, die Sie aus der Hauptansicht entfernt haben. Sie können sie hier einsehen, wiederherstellen oder endgültig löschen.")
         archived_campaigns = get_unique_campaigns(archived=True)
@@ -595,7 +595,7 @@ else:
                         for row_id, data in updates: supabase.table(LEADS_TABLE).update(data).eq('id', row_id).execute()
                         if inserts: supabase.table(LEADS_TABLE).insert(inserts).execute()
                         edited_ids = set(df_to_save['id'].dropna().astype(int)); deleted_ids = list(original_ids - edited_ids)
-                        if deleted_ids: supabase.table(LEADS_TABLE).delete().in_("id", deleted_ids).execute()
+                        if deleted_ids: supabase.table(LEADS_TABLE).delete().in_("id", list(deleted_ids)).execute()
                         st.success("Änderungen erfolgreich gespeichert!"); del st.session_state.df_before_edit; st.rerun()
             if selected_campaign != "Alle Kampagnen anzeigen":
                 with action_col:
