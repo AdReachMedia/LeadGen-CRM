@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# LeadGen CRM - Finale Version mit Supabase-Integration (v9.2 - Final Auth Fix) 1
+# LeadGen CRM - Finale Version mit Supabase-Integration (v9.0 - Multi-User & Auth)
 # -----------------------------------------------------------------------------
 
 # --- 1. IMPORTS & SETUP ---
@@ -350,7 +350,7 @@ else:
                         if b_col3.button("🗑️ Löschen", key=f"delete_task_main_{task['id']}"): delete_task(task['id']); st.rerun()
             if urgent_tasks: display_task_list(urgent_tasks, "🔥 Dringend: Fällig & Überfällig", True)
             if future_tasks: display_task_list(future_tasks, "🗓️ Zukünftige Aufgaben", False)
-
+            
     elif st.session_state.page == "🗄️ Archiv":
         st.info("Hier finden Sie alle Kampagnen, die Sie aus der Hauptansicht entfernt haben. Sie können sie hier einsehen, wiederherstellen oder endgültig löschen.")
         archived_campaigns = get_unique_campaigns(archived=True)
