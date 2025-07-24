@@ -229,7 +229,7 @@ if not st.session_state.user:
                 supabase.auth.set_session(user_session.session.access_token, user_session.session.refresh_token)
                 st.session_state.user = user_session
                 st.rerun()
-            except Exception:
+            except Exception as e:
                 st.error(f"Login fehlgeschlagen. Überprüfen Sie Ihre Eingaben.")
 else:
     if 'page' not in st.session_state: st.session_state.page = "🏠 Startseite"
@@ -305,7 +305,7 @@ else:
                 campaign_performance = df_filtered.groupby('campaign').agg(Anzahl_Leads=('id', 'count'), Termine_vereinbart=('status', lambda s: s.str.contains("Termin vereinbart", na=False).sum())).reset_index()
                 campaign_performance['Konversionsrate (%)'] = (campaign_performance['Termine_vereinbart'] / campaign_performance['Anzahl_Leads'] * 100).round(1)
                 st.dataframe(campaign_performance.sort_values(by="Konversionsrate (%)", ascending=False), use_container_width=True)
-
+    
     elif st.session_state.page == "☑️ Aufgaben":
         with st.expander("Neue Aufgabe manuell erstellen", expanded=False):
             leads_for_dropdown = get_all_leads_for_dropdown()
@@ -350,7 +350,7 @@ else:
                         if b_col3.button("🗑️ Löschen", key=f"delete_task_main_{task['id']}"): delete_task(task['id']); st.rerun()
             if urgent_tasks: display_task_list(urgent_tasks, "🔥 Dringend: Fällig & Überfällig", True)
             if future_tasks: display_task_list(future_tasks, "🗓️ Zukünftige Aufgaben", False)
-
+    
     elif st.session_state.page == "🗄️ Archiv":
         st.info("Hier finden Sie alle Kampagnen, die Sie aus der Hauptansicht entfernt haben. Sie können sie hier einsehen, wiederherstellen oder endgültig löschen.")
         archived_campaigns = get_unique_campaigns(archived=True)
@@ -583,20 +583,21 @@ else:
                             add_task(lead_id=int(lead['id']), due_date=date.today() + timedelta(days=7), description="Follow-Up"); tasks_created += 1
                         if tasks_created > 0: st.success(f"{tasks_created} neue Follow-Up Aufgabe(n) automatisch erstellt!")
                         df_to_save = df_to_save_final.copy(); df_to_save['status'] = df_to_save['status'].apply(lambda x: None if x == EMPTY_STATUS_OPTION else x);
-                        original_ids = set(df_before['id'].dropna().astype(int)); updates = []; inserts = []
-                        for _, row in df_to_save.iterrows():
-                            cleaned_row = clean_row_for_supabase(row.to_dict()); row_id = cleaned_row.get('id')
+                        original_ids = set(df_before['id'].dropna().astype(int));
+                        for index, row in df_to_save.iterrows():
+                            cleaned_row = clean_row_for_supabase(row.to_dict()); cleaned_row['user_id'] = get_user_id()
+                            row_id = cleaned_row.get('id')
                             if pd.notna(row_id) and int(row_id) in original_ids:
                                 del cleaned_row['id']
-                                updates.append((row_id, cleaned_row))
+                                supabase.table(LEADS_TABLE).update(cleaned_row).eq('id', int(row_id)).execute()
                             elif 'name' in cleaned_row and pd.notna(cleaned_row.get('name')):
                                 if 'id' in cleaned_row: del cleaned_row['id']
-                                inserts.append(cleaned_row)
-                        for row_id, data in updates: supabase.table(LEADS_TABLE).update(data).eq('id', row_id).execute()
-                        if inserts: supabase.table(LEADS_TABLE).insert(inserts).execute()
+                                supabase.table(LEADS_TABLE).insert(cleaned_row).execute()
                         edited_ids = set(df_to_save['id'].dropna().astype(int)); deleted_ids = list(original_ids - edited_ids)
-                        if deleted_ids: supabase.table(LEADS_TABLE).delete().in_("id", list(deleted_ids)).execute()
+                        if deleted_ids:
+                            supabase.table(LEADS_TABLE).delete().in_("id", list(deleted_ids)).execute()
                         st.success("Änderungen erfolgreich gespeichert!"); del st.session_state.df_before_edit; st.rerun()
+
             if selected_campaign != "Alle Kampagnen anzeigen":
                 with action_col:
                     action_cols = st.columns(2)
