@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# LeadGen CRM - Finale Version mit Supabase-Integration (v9.1 - Complete & Final)
+# LeadGen CRM - Finale Version mit Supabase-Integration (v9.2 - Final Auth Fix)
 # -----------------------------------------------------------------------------
 
 # --- 1. IMPORTS & SETUP ---
@@ -226,6 +226,7 @@ if not st.session_state.user:
         if submitted:
             try:
                 user_session = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                supabase.auth.set_session(user_session.session.access_token, user_session.session.refresh_token)
                 st.session_state.user = user_session
                 st.rerun()
             except Exception as e:
@@ -238,6 +239,7 @@ else:
     st.sidebar.write(f"**{st.session_state.user.user.email}**")
     if st.sidebar.button("Logout", use_container_width=True):
         st.session_state.user = None
+        supabase.auth.sign_out()
         st.rerun()
     st.sidebar.markdown("---")
     st.sidebar.write("Gehe zu:")
@@ -248,7 +250,7 @@ else:
             st.session_state.page = page
             st.rerun()
     st.sidebar.markdown("---")
-    st.sidebar.caption("LeadGen CRM v9.1 | Final")
+    st.sidebar.caption("LeadGen CRM v9.2 | Final")
     st.header(st.session_state.page)
     
     def go_to_page(page_name): st.session_state.page = page_name
@@ -409,7 +411,7 @@ else:
                                         due_date_str = datetime.strptime(task['due_date'], '%Y-%m-%d').strftime('%d.%m.%Y')
                                         c1, c2 = st.columns([4, 1])
                                         c1.markdown(f"**Fällig am {due_date_str}:** {task['description']}")
-                                        if c2.button("🗑️", key=f"delete_task_{task['id']}", help="Aufgabe endgültig löschen"):
+                                        if c2.button("🗑️", key=f"delete_task_details_{task['id']}", help="Aufgabe endgültig löschen"):
                                             delete_task(task['id']); st.rerun()
                                 with st.form(f"task_form_{lead_id}", clear_on_submit=True):
                                     st.write("**Neue Aufgabe erstellen**"); desc = st.text_input("Beschreibung"); due = st.date_input("Fälligkeitsdatum", min_value=date.today())
@@ -456,7 +458,7 @@ else:
                 if st.button(f"✓ Status für '{st.session_state.booking_name}' aktualisieren"):
                     update_lead_status(st.session_state.booking_lead_id, "🟡 Termin vereinbart")
                     st.session_state.show_calendly = False; st.session_state.booking_lead_id = None; st.rerun()
-
+    
     elif st.session_state.page == "🧮 Kennzahl-Hypothese":
         st.markdown(f"""<style>.kennzahl-box{{background-color:{PRIMARY_COLOR};color:white;padding:2rem;border-radius:1rem;}}.kennzahl-box h2{{font-size:1.5rem;margin-top:1rem;}}</style>""", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
@@ -464,7 +466,7 @@ else:
         with c2: kosten_pro_lead = st.number_input("Voraussichtliche Kosten pro Lead in EUR", value=100, min_value=1); abschlussquote = st.slider("Abschlussquote in %", 0, 100, 60, step=5)
         anzahl_leads = werbebudget / kosten_pro_lead if kosten_pro_lead else 0; anzahl_neukunden = anzahl_leads * (abschlussquote / 100); potenzieller_verdienst = anzahl_neukunden * gewinn_pro_neukunde; roas = potenzieller_verdienst / werbebudget if werbebudget else 0; gewinn = potenzieller_verdienst - werbebudget
         st.markdown(f"""<div class="kennzahl-box"><h2>Potenzielle Leads: <strong>{anzahl_leads:.0f}</strong></h2><h2>Potenzielle Neukunden: <strong>{anzahl_neukunden:.1f}</strong></h2><h2>Potenzieller Verdienst: <strong>{potenzieller_verdienst:,.0f} EUR</strong></h2><h2>ROAS: <strong>{roas:.1f}x</strong></h2><h2>Gewinn: <strong>{gewinn:,.0f} EUR</strong></h2></div>""", unsafe_allow_html=True)
-
+    
     elif st.session_state.page == "🔎 LeadFinder":
         st.subheader("1. Leads über GelbeSeiten.de finden");
         with st.form("search_form"):
