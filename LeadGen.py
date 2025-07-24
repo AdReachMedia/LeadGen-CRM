@@ -229,7 +229,7 @@ if not st.session_state.user:
                 supabase.auth.set_session(user_session.session.access_token, user_session.session.refresh_token)
                 st.session_state.user = user_session
                 st.rerun()
-            except Exception as e:
+            except Exception:
                 st.error(f"Login fehlgeschlagen. Überprüfen Sie Ihre Eingaben.")
 else:
     if 'page' not in st.session_state: st.session_state.page = "🏠 Startseite"
@@ -250,7 +250,7 @@ else:
             st.session_state.page = page
             st.rerun()
     st.sidebar.markdown("---")
-    st.sidebar.caption("LeadGen CRM v9.2 | Final")
+    st.sidebar.caption("LeadGen CRM v9.0 | Multi-User")
     st.header(st.session_state.page)
     
     def go_to_page(page_name): st.session_state.page = page_name
@@ -586,11 +586,13 @@ else:
                         original_ids = set(df_before['id'].dropna().astype(int)); updates = []; inserts = []
                         for _, row in df_to_save.iterrows():
                             cleaned_row = clean_row_for_supabase(row.to_dict()); row_id = cleaned_row.get('id')
-                            if pd.notna(row_id) and int(row_id) in original_ids: updates.append(cleaned_row)
+                            if pd.notna(row_id) and int(row_id) in original_ids:
+                                del cleaned_row['id']
+                                updates.append((row_id, cleaned_row))
                             elif 'name' in cleaned_row and pd.notna(cleaned_row.get('name')):
                                 if 'id' in cleaned_row: del cleaned_row['id']
                                 inserts.append(cleaned_row)
-                        if updates: supabase.table(LEADS_TABLE).upsert(updates).execute()
+                        for row_id, data in updates: supabase.table(LEADS_TABLE).update(data).eq('id', row_id).execute()
                         if inserts: supabase.table(LEADS_TABLE).insert(inserts).execute()
                         edited_ids = set(df_to_save['id'].dropna().astype(int)); deleted_ids = list(original_ids - edited_ids)
                         if deleted_ids: supabase.table(LEADS_TABLE).delete().in_("id", deleted_ids).execute()
